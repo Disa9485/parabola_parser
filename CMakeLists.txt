@@ -5,8 +5,14 @@ project(parabola_parser LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(Eigen3 CONFIG REQUIRED)
+
 add_executable(parabola_parser
     main.cpp
+)
+
+target_link_libraries(parabola_parser
+    PRIVATE Eigen3::Eigen
 )
 
 target_include_directories(parabola_parser PRIVATE

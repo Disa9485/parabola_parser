@@ -7,7 +7,7 @@ From the project root, build and run with:
 ```bat
 cmake --preset default --fresh
 cmake --build --preset release
-.\build\Release\parabola_parser.exe
+.\build\Release\parabola_parser.exe parabola_data.txt --stats --fit --plot
 ```
 
 If dependencies are missing, run:

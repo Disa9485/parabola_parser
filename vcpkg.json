@@ -1,0 +1,6 @@
+{
+  "name": "parabola-parser",
+  "dependencies": [
+    "eigen3"
+  ]
+}
