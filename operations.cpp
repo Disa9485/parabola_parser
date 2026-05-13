@@ -1,5 +1,8 @@
 #include "operations.hpp"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 void parse(const std::string& raw_data, std::vector<std::pair<float, float>>& data) {
     auto start = std::chrono::high_resolution_clock::now(); // Parse start
 
@@ -309,6 +312,40 @@ void mirror(const std::vector<std::pair<float, float>> &data, FitData &fit_data)
     std::cout << "Mirror Time: " << us << " us" << std::endl;
 }
 
+void save_plot(const std::string& filename, GLFWwindow* window) {
+    // Get framebuffer pixels
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    std::vector<unsigned char> pixels(width * height * 4);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(
+        0,
+        0,
+        width,
+        height,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        pixels.data()
+    );
+
+    // Flip openGL framebuffer
+    std::vector<unsigned char> flipped(width * height * 4);
+    for (int y = 0; y < height; y++) {
+        memcpy(&flipped[y * width * 4], &pixels[(height - 1 - y) * width * 4], width * 4);
+    }
+
+    // Save plot
+    stbi_write_png(
+        filename.c_str(),
+        width,
+        height,
+        4,
+        flipped.data(),
+        width * 4
+    );
+    std::cout << "Saved plot: " << filename << std::endl;
+}
+
 void plot(const std::vector<std::pair<float, float>>& data, const StatsData &stats_data, const FitData& fit_data) {
     auto start = std::chrono::high_resolution_clock::now(); // Plot setup start
     
@@ -390,15 +427,32 @@ void plot(const std::vector<std::pair<float, float>>& data, const StatsData &sta
     start = std::chrono::high_resolution_clock::now(); // Plot render start
 
     // Render loop
+    bool plot_saved = false;
+    int frame_count = 0;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
-        // Plot data with ImGui
+        // Start ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        ImGui::Begin("Parabola Data");
-        if (ImPlot::BeginPlot("Parabola Data")) {
+
+        // Set window style
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGuiWindowFlags window_flags =
+            ImGuiWindowFlags_NoTitleBar |
+            ImGuiWindowFlags_NoResize |
+            ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoCollapse |
+            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoNavFocus;
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+    
+        // Plot data with ImGui
+        ImGui::Begin("Parabola Data", nullptr, window_flags);
+        if (ImPlot::BeginPlot("Parabola Data", ImVec2(-1, -1))) {
             ImPlot::SetupAxes("X", "Y"); // Setup axes
 
             // Scatter plot parabola data
@@ -422,6 +476,7 @@ void plot(const std::vector<std::pair<float, float>>& data, const StatsData &sta
             ImPlot::EndPlot(); // End plot
         }
         ImGui::End();
+        ImGui::PopStyleVar();
         ImGui::Render();
 
         // Clear framebuffer
@@ -433,6 +488,14 @@ void plot(const std::vector<std::pair<float, float>>& data, const StatsData &sta
         
         // Draw framebuffer
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Save plot after 3 frames
+        if (!plot_saved && frame_count > 3) {
+            save_plot("plot.png", window);
+            plot_saved = true;
+        } else {
+            frame_count++;
+        }
 
         // Swap framebuffers
         glfwSwapBuffers(window);
