@@ -1,6 +1,16 @@
 {
   "name": "parabola-parser",
   "dependencies": [
-    "eigen3"
+    "eigen3",
+    "glfw3",
+    "glad",
+    "implot",
+    {
+      "name": "imgui",
+      "features": [
+        "glfw-binding",
+        "opengl3-binding"
+      ]
+    }
   ]
 }
